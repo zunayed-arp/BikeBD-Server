@@ -26,7 +26,16 @@ async function run() {
 		const productsCollection = database.collection('products')
 		const usersCollection = database.collection('users');
 		const orderCollection = database.collection('order')
-		const reviewsCollection = database.collection('reviews') 
+		const reviewsCollection = database.collection('reviews')
+		const blogsCollection = database.collection('blogs')
+
+
+
+		app.get('/blogs', async (req, res) => {
+			const blogs = await blogsCollection.find({}).toArray();
+			res.json(blogs);
+		})
+
 
 
 		app.get('/reviews', async (req, res) => {
@@ -63,21 +72,21 @@ async function run() {
 			const id = req.params.id;
 			const query = { _id: ObjectId(id) };
 			const product = await productsCollection.findOne(query);
-			console.log('load user id:', id);
+			// console.log('load user id:', id);
 			res.json(product);
 		});
 
 
 		app.get('/users', async (req, res) => {
 			const cursor = await usersCollection.find({}).toArray();
-			console.log(cursor);
+			// console.log(cursor);
 			res.json(cursor)
 		});
 
 		app.get('/users/:email', async (req, res) => {
 			const email = req.params.email;
 			const query = { email: email };
-			console.log(email)
+			// console.log(email)
 			const user = await usersCollection.findOne(query);
 			let isAdmin = false;
 			if (user?.role === 'admin') {
@@ -86,6 +95,13 @@ async function run() {
 
 			res.json({admin:isAdmin});
 
+		});
+
+
+		app.post('/blogs', async (req, res) => {
+			const blog = req.body;
+			const result = await blogsCollection.insertOne(blog);
+			res.json(result);
 		});
 
 
@@ -121,13 +137,37 @@ async function run() {
 		});
 
 
+		//update package 
+
+		app.put('/products/:id', async (req, res) => {
+			const id = req.params.id
+			const updateProduct = req.body;
+			const filter = { _id: ObjectId(id) };
+			const option = { upsert: true };
+
+			const updateDoc = {
+				$set: {
+					title: updateProduct.title, duration: updateProduct.duration, rating: updateProduct.rating, description: updateProduct.description, price: updateProduct.price, img: updateProduct.img
+
+				},
+			};
+
+			const result = await productsCollection.updateOne(filter, updateDoc, option);
+
+			console.log('updating', id);
+
+			res.json(result);
+
+		})
+
+
 		app.put('/users', async (req, res) => {
 			const user = req.body;
 			const filter = { email: user.email };
 			const options = { upsert: true };
 			const updateDoc = { $set: user };
 			const result = await usersCollection.updateOne(filter, updateDoc, options);
-			console.log(result);
+			// console.log(result);
 			res.json(result);
 		});
 
@@ -150,12 +190,25 @@ async function run() {
 			const id = req.params.id;
 			const updateDoc = {
 				$set: {
-					status: 'Confirmed',
+					status: 'Shipped',
 				}
 			};
 			const query = { _id: ObjectId(id) };
 			const result = await orderCollection.updateOne(query, updateDoc);
 			res.json(result.modifiedCount)
+		})
+
+
+		//delete single service
+
+		app.delete('/products/:id', async (req, res) => {
+			const id = req.params.id;
+			const query = { _id: ObjectId(id) };
+			const result = await productsCollection.deleteOne(query);
+
+			console.log(result)
+			// res.send('hitting the server')
+			res.json(result);
 		})
 
 
